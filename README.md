@@ -1,4 +1,5 @@
 # jasyncq
+[![PyPI version](https://badge.fury.io/py/jasyncq.svg)](https://badge.fury.io/py/jasyncq)
 
 Asynchronous task queue using mysql
 
