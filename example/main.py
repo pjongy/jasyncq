@@ -3,8 +3,8 @@ import logging
 
 import aiomysql
 
-from dispatcher.tasks import TasksDispatcher
-from repository.tasks import TaskRepository
+from jasyncq.dispatcher.tasks import TasksDispatcher
+from jasyncq.repository.tasks import TaskRepository
 
 loop = asyncio.get_event_loop()
 

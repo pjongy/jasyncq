@@ -7,8 +7,8 @@ from typing import List, Any
 from aiomysql import Pool
 from pypika import Query, Table
 
-from model.task import TaskStatus
-from repository.abstract import AbstractRepository
+from jasyncq.model.task import TaskStatus
+from jasyncq.repository.abstract import AbstractRepository
 
 
 class TaskRepository(AbstractRepository):

@@ -2,8 +2,8 @@ from typing import List
 
 import deserialize
 
-from model.task import Task
-from repository.tasks import TaskRepository
+from jasyncq.model.task import Task
+from jasyncq.repository.tasks import TaskRepository
 
 
 class TasksDispatcher:

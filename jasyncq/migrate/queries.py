@@ -4,7 +4,7 @@ from typing import List
 
 from aiomysql import Pool
 
-from repository.abstract import AbstractRepository
+from jasyncq.repository.abstract import AbstractRepository
 
 migrate_targets = [
     '20201122172511_create_task_table.json'
