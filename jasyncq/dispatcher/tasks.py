@@ -12,10 +12,15 @@ class TasksDispatcher:
 
     async def fetch_scheduled_tasks(
         self,
-        offset: int,
-        limit: int
+        queue_name: str,
+        limit: int,
+        offset: int = 0,
     ) -> List[Task]:
-        task_rows = await self.repository.fetch_scheduled_tasks(offset=offset, limit=limit)
+        task_rows = await self.repository.fetch_scheduled_tasks(
+            offset=offset,
+            limit=limit,
+            queue_name=queue_name,
+        )
         return [
             deserialize.deserialize(
                 Task,
@@ -26,6 +31,7 @@ class TasksDispatcher:
                     'scheduled_at': task_row[3],
                     'is_urgent': task_row[4],
                     'task': task_row[5],
+                    'queue_name': task_row[6],
                 }
             )
             for task_row in task_rows
@@ -33,13 +39,15 @@ class TasksDispatcher:
 
     async def fetch_pending_tasks(
         self,
-        offset: int,
+        queue_name: str,
         limit: int,
+        offset: int = 0,
         check_term_seconds: int = 30
     ) -> List[Task]:
         task_rows = await self.repository.fetch_pending_tasks(
             offset=offset,
             limit=limit,
+            queue_name=queue_name,
             check_term_seconds=check_term_seconds,
         )
         return [
@@ -52,13 +60,18 @@ class TasksDispatcher:
                     'scheduled_at': task_row[3],
                     'is_urgent': task_row[4],
                     'task': task_row[5],
+                    'queue_name': task_row[6],
                 }
             )
             for task_row in task_rows
         ]
 
-    async def apply_tasks(self, tasks: List[dict], scheduled_at: int = 0):
-        await self.repository.insert_tasks(tasks=tasks, scheduled_at=scheduled_at)
+    async def apply_tasks(self, tasks: List[dict], queue_name: str, scheduled_at: int = 0):
+        await self.repository.insert_tasks(
+            tasks=tasks,
+            scheduled_at=scheduled_at,
+            queue_name=queue_name,
+        )
 
     async def complete_tasks(self, task_ids: List[str]):
         await self.repository.delete_tasks(task_ids=task_ids)

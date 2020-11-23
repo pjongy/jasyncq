@@ -22,6 +22,7 @@ class TaskRepository(AbstractRepository):
         self.task__scheduled_at = self.task.field('scheduled_at')
         self.task__is_urgent = self.task.field('is_urgent')
         self.task__task = self.task.field('task')
+        self.task__queue_name = self.task.field('queue_name')
 
     def with_locked_table(self, query: List[str]) -> List[str]:
         return [
@@ -33,11 +34,13 @@ class TaskRepository(AbstractRepository):
     async def fetch_scheduled_tasks(
         self,
         offset: int,
-        limit: int
+        limit: int,
+        queue_name: str,
     ) -> List[Any]:
         current_epoch = time.time()
         fetch_filter = (self.task__status == int(TaskStatus.QUEUED)) & (
-            (self.task__scheduled_at <= current_epoch))
+            (self.task__scheduled_at <= current_epoch)) & (
+            (self.task__queue_name == queue_name))
         get_tasks_query = Query.from_(self.task).select(
             self.task__uuid,
             self.task__status,
@@ -45,6 +48,7 @@ class TaskRepository(AbstractRepository):
             self.task__scheduled_at,
             self.task__is_urgent,
             self.task__task,
+            self.task__queue_name,
         ).where(fetch_filter).offset(offset).limit(limit).get_sql(quote_char='`')
         logging.debug(get_tasks_query)
 
@@ -66,11 +70,13 @@ class TaskRepository(AbstractRepository):
         self,
         offset: int,
         limit: int,
-        check_term_seconds: int = 30
+        check_term_seconds: int,
+        queue_name: str,
     ) -> List[Any]:
         current_epoch = time.time()
         fetch_filter = (self.task__status == int(TaskStatus.WORK_IN_PROGRESS)) & (
-            self.task__progressed_at <= (int(current_epoch) - check_term_seconds))
+            self.task__progressed_at <= (int(current_epoch) - check_term_seconds)) & (
+            (self.task__queue_name == queue_name))
         get_tasks_query = Query.from_(self.task).select(
             self.task__uuid,
             self.task__status,
@@ -78,6 +84,7 @@ class TaskRepository(AbstractRepository):
             self.task__scheduled_at,
             self.task__is_urgent,
             self.task__task,
+            self.task__queue_name,
         ).where(fetch_filter).offset(offset).limit(limit).get_sql(quote_char='`')
         logging.debug(get_tasks_query)
 
@@ -95,7 +102,7 @@ class TaskRepository(AbstractRepository):
         logging.debug(task_rows)
         return task_rows
 
-    async def insert_tasks(self, tasks: List[dict], scheduled_at: int=0):
+    async def insert_tasks(self, tasks: List[dict], scheduled_at: int, queue_name: str):
         logging.debug(tasks)
         insert_tasks_query = Query.into(self.task)
         for task in tasks:
@@ -105,7 +112,8 @@ class TaskRepository(AbstractRepository):
                 0,
                 scheduled_at,
                 False,
-                json.dumps(task)
+                json.dumps(task),
+                queue_name,
             )
         insert_tasks_query = insert_tasks_query.get_sql(quote_char='`')
         logging.debug(insert_tasks_query)

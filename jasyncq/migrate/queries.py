@@ -7,7 +7,8 @@ from aiomysql import Pool
 from jasyncq.repository.abstract import AbstractRepository
 
 migrate_targets = [
-    '20201122172511_create_task_table.json'
+    '20201122172511_create_task_table.json',
+    '20201123151600_alter_task_table_add_queue_name_column.json',
 ]
 
 
@@ -19,7 +20,7 @@ class NaiveRepository(AbstractRepository):
         await self._execute(queries)
 
 
-def _get_queries(direction: str):
+def _get_queries(direction: str) -> List[str]:
     queries = []
     current_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -32,9 +33,9 @@ def _get_queries(direction: str):
     return queries
 
 
-def up():
+def up() -> List[str]:
     return _get_queries('UP')
 
 
-def down():
+def down() -> List[str]:
     return _get_queries('DOWN')

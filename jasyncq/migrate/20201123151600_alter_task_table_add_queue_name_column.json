@@ -1,0 +1,4 @@
+{
+  "UP": "ALTER TABLE task ADD COLUMN queue_name VARCHAR(255) AFTER task;",
+  "DOWN": "ALTER TABLE task DROP COLUMN queue_name;"
+}

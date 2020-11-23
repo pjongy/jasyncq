@@ -26,3 +26,4 @@ class Task:
     scheduled_at: int  # epoch timestamp
     is_urgent: bool
     task: dict
+    queue_name: str
