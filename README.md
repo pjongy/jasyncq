@@ -10,52 +10,67 @@ aiomysql~=0.0.20
 PyPika~=0.37.6
 ```
 
-## Example
+## How to use
+
+#### 1. Create aiomysql connection pool
 ```python
 import asyncio
 import logging
 
 import aiomysql
 
+loop = asyncio.get_event_loop()
+
+pool = await aiomysql.create_pool(
+    host='127.0.0.1',
+    port=3306,
+    user='root',
+    db='test',
+    loop=loop,
+    autocommit=False,
+)
+```
+
+#### 2. Generate topic (table) with initialize and inject repository to dispatcher
+```python
 from jasyncq.dispatcher.tasks import TasksDispatcher
 from jasyncq.repository.tasks import TaskRepository
 
-
-async def run(loop):
-    FORMAT = "[%(filename)s:%(lineno)s - %(funcName)s ] %(message)s"
-    logging.basicConfig(format=FORMAT, level=logging.DEBUG)
-    pool = await aiomysql.create_pool(
-        host='127.0.0.1',
-        port=3306,
-        user='root',
-        password='password',
-        db='test',
-        loop=loop,
-        autocommit=False,
-    )
-    dispatcher = TasksDispatcher(repository=TaskRepository(pool=pool))
-    await dispatcher.apply_tasks(
-        [
-            {'a': 1},
-            {'b': 1}
-        ],
-        queue_name='QUEUE_TEST',
-    )
-    tasks = await dispatcher.fetch_scheduled_tasks('QUEUE_TEST', 10)
-    pending_tasks = await dispatcher.fetch_pending_tasks('QUEUE_TEST', 10)
-    logging.info(tasks)
-    logging.info(pending_tasks)
-    # ...RUN JOBS WITH tasks and pending_tasks
-
-    task_ids = [str(task.uuid) for task in [*tasks, *pending_tasks]]
-    await dispatcher.complete_tasks(task_ids=task_ids)
-
-
-if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(run(loop=loop))
-
+repository = TaskRepository(pool=pool, topic_name='test_topic')
+await repository.initialize()
+dispatcher = TasksDispatcher(repository=repository)
 ```
+
+#### 3. Enjoy queue
+- Publish tasks
+```python
+await dispatcher.apply_tasks(
+    tasks=[...dict type tasks...],
+    queue_name='QUEUE_TEST',
+)
+```
+- Consume tasks
+```python
+scheduled_tasks = await dispatcher.fetch_scheduled_tasks(queue_name='QUEUE_TEST', limit=10)
+pending_tasks = await dispatcher.fetch_pending_tasks(
+    queue_name='QUEUE_TEST',
+    limit=10,
+    check_term_seconds=60,
+)
+tasks = [*pending_tasks, *scheduled_tasks]
+# ...RUN JOBS WITH tasks
+```
+
+#### 4. Complete tasks
+```python
+task_ids = [str(task.uuid) for task in tasks]
+await dispatcher.complete_tasks(task_ids=task_ids)
+```
+
+## Example
+- Consumer: jasyncq/example/consumer.py
+- Producer: jasyncq/example/producer.py
+
 
 ## You should know
 
