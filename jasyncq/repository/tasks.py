@@ -24,6 +24,20 @@ class TaskRepository(AbstractRepository):
         self.task__task = self.task.field('task')
         self.task__queue_name = self.task.field('queue_name')
 
+    async def initialize(self):
+        queries = [
+            f'CREATE TABLE IF NOT EXISTS {self.table_name} ('
+            f'uuid VARCHAR(36) NOT NULL,'
+            f'status TINYINT NOT NULL,'
+            f'progressed_at BIGINT NOT NULL,'
+            f'scheduled_at BIGINT NOT NULL,'
+            f'is_urgent BOOL NOT NULL DEFAULT false,'
+            f'task TEXT NOT NULL,'
+            f'queue_name VARCHAR(255) NOT NULL'
+            f');',
+        ]
+        await self._execute(queries=queries)
+
     def with_locked_table(self, query: List[str]) -> List[str]:
         return [
             f'LOCK TABLES {self.table_name} WRITE',
@@ -38,9 +52,11 @@ class TaskRepository(AbstractRepository):
         queue_name: str,
     ) -> List[Any]:
         current_epoch = time.time()
-        fetch_filter = (self.task__status == int(TaskStatus.QUEUED)) & (
-            (self.task__scheduled_at <= current_epoch)) & (
-            (self.task__queue_name == queue_name))
+
+        fetch_filter = (self.task__status == int(TaskStatus.QUEUED))
+        fetch_filter &= (self.task__scheduled_at <= current_epoch)
+        fetch_filter &= (self.task__queue_name == queue_name)
+
         get_tasks_query = Query.from_(self.task).select(
             self.task__uuid,
             self.task__status,
@@ -74,9 +90,11 @@ class TaskRepository(AbstractRepository):
         queue_name: str,
     ) -> List[Any]:
         current_epoch = time.time()
-        fetch_filter = (self.task__status == int(TaskStatus.WORK_IN_PROGRESS)) & (
-            self.task__progressed_at <= (int(current_epoch) - check_term_seconds)) & (
-            (self.task__queue_name == queue_name))
+
+        fetch_filter = (self.task__status == int(TaskStatus.WORK_IN_PROGRESS))
+        fetch_filter &= (self.task__progressed_at <= (int(current_epoch) - check_term_seconds))
+        fetch_filter &= (self.task__queue_name == queue_name)
+
         get_tasks_query = Query.from_(self.task).select(
             self.task__uuid,
             self.task__status,

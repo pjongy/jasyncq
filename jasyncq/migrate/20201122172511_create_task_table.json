@@ -1,4 +1,0 @@
-{
-  "UP": "CREATE TABLE task (uuid VARCHAR(36) NOT NULL,status TINYINT NOT NULL,progressed_at BIGINT NOT NULL,scheduled_at BIGINT NOT NULL,is_urgent BOOL NOT NULL DEFAULT false,task TEXT NOT NULL);",
-  "DOWN": "DROP TABLE task;"
-}

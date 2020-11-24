@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from asyncio import AbstractEventLoop
 
 import aiomysql
 
@@ -7,19 +8,20 @@ from jasyncq.dispatcher.tasks import TasksDispatcher
 from jasyncq.repository.tasks import TaskRepository
 
 
-async def run(loop):
+async def run(loop: AbstractEventLoop):
     FORMAT = "[%(filename)s:%(lineno)s - %(funcName)s ] %(message)s"
     logging.basicConfig(format=FORMAT, level=logging.DEBUG)
     pool = await aiomysql.create_pool(
         host='127.0.0.1',
         port=3306,
         user='root',
-        password='password',
         db='test',
         loop=loop,
         autocommit=False,
     )
-    dispatcher = TasksDispatcher(repository=TaskRepository(pool=pool))
+    repository = TaskRepository(pool=pool)
+    await repository.initialize()
+    dispatcher = TasksDispatcher(repository=repository)
     await dispatcher.apply_tasks(
         [
             {'a': 1},
@@ -38,5 +40,5 @@ async def run(loop):
 
 
 if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(run(loop=loop))
+    event_loop = asyncio.get_event_loop()
+    event_loop.run_until_complete(run(loop=event_loop))
