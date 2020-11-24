@@ -74,4 +74,5 @@ class TasksDispatcher:
         )
 
     async def complete_tasks(self, task_ids: List[str]):
-        await self.repository.delete_tasks(task_ids=task_ids)
+        if task_ids:
+            await self.repository.delete_tasks(task_ids=task_ids)
