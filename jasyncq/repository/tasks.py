@@ -12,9 +12,9 @@ from jasyncq.repository.abstract import AbstractRepository
 
 
 class TaskRepository(AbstractRepository):
-    def __init__(self, pool: Pool):
+    def __init__(self, pool: Pool, topic_name: str = 'default_topic'):
         super().__init__(pool=pool)
-        self.table_name = 'task'
+        self.table_name = f'jasyncq_{topic_name}'
         self.task = Table(self.table_name)
         self.task__uuid = self.task.field('uuid')
         self.task__status = self.task.field('status')

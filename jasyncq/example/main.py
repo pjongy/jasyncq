@@ -19,7 +19,7 @@ async def run(loop: AbstractEventLoop):
         loop=loop,
         autocommit=False,
     )
-    repository = TaskRepository(pool=pool)
+    repository = TaskRepository(pool=pool, topic_name='test_topic')
     await repository.initialize()
     dispatcher = TasksDispatcher(repository=repository)
     await dispatcher.apply_tasks(
