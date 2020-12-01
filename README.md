@@ -3,13 +3,6 @@
 
 Asynchronous task queue using mysql
 
-## Requirements
-```
-deserialize~=1.8.0
-aiomysql~=0.0.20
-PyPika~=0.37.6
-```
-
 ## How to use
 
 #### 1. Create aiomysql connection pool
