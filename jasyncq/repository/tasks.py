@@ -27,14 +27,19 @@ class TaskRepository(AbstractRepository):
     async def initialize(self):
         queries = [
             f'CREATE TABLE IF NOT EXISTS {self.table_name} ('
-            f'uuid VARCHAR(36) NOT NULL,'
-            f'status TINYINT NOT NULL,'
-            f'progressed_at BIGINT NOT NULL,'
-            f'scheduled_at BIGINT NOT NULL,'
-            f'is_urgent BOOL NOT NULL DEFAULT false,'
-            f'task TEXT NOT NULL,'
-            f'queue_name VARCHAR(255) NOT NULL'
-            f');',
+            '  uuid VARCHAR(36) NOT NULL,'
+            '  status TINYINT NOT NULL,'
+            '  progressed_at BIGINT NOT NULL,'
+            '  scheduled_at BIGINT NOT NULL,'
+            '  is_urgent BOOL NOT NULL DEFAULT false,'
+            '  task TEXT NOT NULL,'
+            '  queue_name VARCHAR(255) NOT NULL,'
+            'INDEX idx__uuid (uuid),'
+            'INDEX idx__status (status),'
+            'INDEX idx__progressed_at (progressed_at),'
+            'INDEX idx__scheduled_at (scheduled_at),'
+            'INDEX idx__queue_name (queue_name)'
+            ');',
         ]
         await self._execute(queries=queries)
 
