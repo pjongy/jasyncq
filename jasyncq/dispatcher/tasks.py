@@ -1,9 +1,10 @@
 from typing import List
+from uuid import UUID
 
-import deserialize
-
-from jasyncq.model.task import Task
+from jasyncq.dispatcher.model.task import TaskOut, TaskIn
 from jasyncq.repository.tasks import TaskRepository
+from jasyncq.repository.model.task import TaskRowIn
+from jasyncq.util import let_if
 
 
 class TasksDispatcher:
@@ -15,24 +16,19 @@ class TasksDispatcher:
         queue_name: str,
         limit: int,
         offset: int = 0,
-    ) -> List[Task]:
+    ) -> List[TaskOut]:
         task_rows = await self.repository.fetch_scheduled_tasks(
             offset=offset,
             limit=limit,
             queue_name=queue_name,
         )
         return [
-            deserialize.deserialize(
-                Task,
-                {
-                    'uuid': task_row[0],
-                    'status': task_row[1],
-                    'progressed_at': task_row[2],
-                    'scheduled_at': task_row[3],
-                    'is_urgent': task_row[4],
-                    'task': task_row[5],
-                    'queue_name': task_row[6],
-                }
+            TaskOut(
+                uuid=UUID(task_row.uuid),
+                scheduled_at=task_row.scheduled_at,
+                task=task_row.task,
+                queue_name=task_row.queue_name,
+                depend_on=let_if(task_row.depend_on, UUID),
             )
             for task_row in task_rows
         ]
@@ -43,7 +39,7 @@ class TasksDispatcher:
         limit: int,
         offset: int = 0,
         check_term_seconds: int = 30
-    ) -> List[Task]:
+    ) -> List[TaskOut]:
         task_rows = await self.repository.fetch_pending_tasks(
             offset=offset,
             limit=limit,
@@ -51,27 +47,37 @@ class TasksDispatcher:
             check_term_seconds=check_term_seconds,
         )
         return [
-            deserialize.deserialize(
-                Task,
-                {
-                    'uuid': task_row[0],
-                    'status': task_row[1],
-                    'progressed_at': task_row[2],
-                    'scheduled_at': task_row[3],
-                    'is_urgent': task_row[4],
-                    'task': task_row[5],
-                    'queue_name': task_row[6],
-                }
+            TaskOut(
+                uuid=UUID(task_row.uuid),
+                scheduled_at=task_row.scheduled_at,
+                task=task_row.task,
+                queue_name=task_row.queue_name,
+                depend_on=let_if(task_row.depend_on, UUID),
             )
             for task_row in task_rows
         ]
 
-    async def apply_tasks(self, tasks: List[dict], queue_name: str, scheduled_at: int = 0):
-        await self.repository.insert_tasks(
-            tasks=tasks,
-            scheduled_at=scheduled_at,
-            queue_name=queue_name,
-        )
+    async def apply_tasks(self, tasks: List[TaskIn]) -> List[TaskOut]:
+        task_rows = await self.repository.insert_tasks(tasks=[
+            TaskRowIn(
+                scheduled_at=task.scheduled_at,
+                is_urgent=task.is_urgent,
+                task=task.task,
+                queue_name=task.queue_name,
+                depend_on=task.depend_on,
+            )
+            for task in tasks
+        ])
+        return [
+            TaskOut(
+                uuid=UUID(task_row.uuid),
+                scheduled_at=task_row.scheduled_at,
+                task=task_row.task,
+                queue_name=task_row.queue_name,
+                depend_on=let_if(task_row.depend_on, UUID),
+            )
+            for task_row in task_rows
+        ]
 
     async def complete_tasks(self, task_ids: List[str]):
         if task_ids:

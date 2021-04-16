@@ -3,7 +3,9 @@ import logging
 from asyncio import AbstractEventLoop
 
 import aiomysql
+import deserialize
 
+from jasyncq.dispatcher.model.task import TaskIn
 from jasyncq.dispatcher.tasks import TasksDispatcher
 from jasyncq.repository.tasks import TaskRepository
 
@@ -21,12 +23,32 @@ async def run(loop: AbstractEventLoop):
     await repository.initialize()
     dispatcher = TasksDispatcher(repository=repository)
 
+    tasks = [
+        {'a': 1},
+        {'b': 1},
+    ]
+    queue_name = 'QUEUE_TEST'
+    queued_tasks = await dispatcher.apply_tasks(
+        tasks=[
+            deserialize.deserialize(TaskIn, {
+                'task': task,
+                'queue_name': queue_name,
+            })
+            for task in tasks
+        ],
+    )
+
+    depended_task = queued_tasks[0]
     await dispatcher.apply_tasks(
         tasks=[
-            {'a': 1},
-            {'b': 1}
+            deserialize.deserialize(TaskIn, {
+                'task': task,
+                'queue_name': queue_name,
+                # This task will consume after depended task is completed
+                'depend_on': str(depended_task.uuid),
+            })
+            for task in tasks
         ],
-        queue_name='QUEUE_TEST',
     )
 
 

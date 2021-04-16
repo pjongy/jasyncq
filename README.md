@@ -36,10 +36,10 @@ dispatcher = TasksDispatcher(repository=repository)
 
 #### 3. Enjoy queue
 - Publish tasks
+
 ```python
 await dispatcher.apply_tasks(
-    tasks=[...dict type tasks...],
-    queue_name='QUEUE_TEST',
+    tasks=[...list of jasyncq.dispatcher.model.task.TaskIn...],
 )
 ```
 - Consume tasks
