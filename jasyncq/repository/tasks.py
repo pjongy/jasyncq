@@ -6,7 +6,7 @@ from typing import List
 
 import deserialize
 from aiomysql import Pool
-from pypika import Query, Table
+from pypika import Query, Table, Order
 from pypika.terms import BasicCriterion
 
 from jasyncq.repository.model.task import TaskStatus, TaskRowIn, TaskRow
@@ -77,7 +77,10 @@ class TaskRepository(AbstractRepository):
             self.task__task,
             self.task__queue_name,
             self.task__depend_on,
-        ).where(fetch_filter).offset(offset).limit(limit).get_sql(quote_char='`')
+        ).where(fetch_filter).orderby(
+            self.task__is_urgent,
+            order=Order.desc,
+        ).offset(offset).limit(limit).get_sql(quote_char='`')
         logging.debug(get_tasks_query)
 
         task_rows = (await self._execute_and_fetch([

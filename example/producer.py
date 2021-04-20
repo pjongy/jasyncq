@@ -38,6 +38,18 @@ async def run(loop: AbstractEventLoop):
         ],
     )
 
+    await dispatcher.apply_tasks(
+        tasks=[
+            deserialize.deserialize(TaskIn, {
+                'task': task,
+                'queue_name': queue_name,
+                # This task will be consumed earlier than non-urgent
+                'is_urgent': True,
+            })
+            for task in tasks
+        ],
+    )
+
     depended_task = queued_tasks[0]
     await dispatcher.apply_tasks(
         tasks=[
