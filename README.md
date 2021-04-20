@@ -61,13 +61,19 @@ await dispatcher.complete_tasks(task_ids=task_ids)
 ```
 
 ## Example
-- Consumer: jasyncq/example/consumer.py
-- Producer: jasyncq/example/producer.py
+- Consumer: /example/consumer.py
+- Producer: /example/producer.py
 
 ### Start test mysql with docker
 ```
 $ docker run --name test_db -p 3306:3306 -e MYSQL_ALLOW_EMPTY_PASSWORD=true -d mysql:8.0.17
 $ docker exec -it test_db bash -c 'mysql -u root -e "create database test;"'
+```
+
+### Run example scripts
+```
+$ python3 -m example.producer
+$ python3 -m example.consumer
 ```
 
 
