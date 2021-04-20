@@ -64,6 +64,18 @@ await dispatcher.complete_tasks(task_ids=task_ids)
 - Consumer: jasyncq/example/consumer.py
 - Producer: jasyncq/example/producer.py
 
+### Start test mysql with docker
+```
+$ docker run --name test_db -p 3306:3306 -e MYSQL_ALLOW_EMPTY_PASSWORD=true -d mysql:8.0.17
+$ docker exec -it test_db bash -c 'mysql -u root -e "create database test;"'
+```
+
+
+## Build
+```
+$ python3 setup.py sdist
+$ python3 -m pip install ./dist/jasyncq-*
+```
 
 ## You should know
 

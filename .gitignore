@@ -4,3 +4,5 @@
 **.env
 
 .idea/
+dist/
+*.egg-info/
