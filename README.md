@@ -3,6 +3,12 @@
 
 Asynchronous task queue using mysql
 
+## You should know
+
+- Dispatcher's `fetch_scheduled_tasks` and `fetch_pending_tasks` method takes scheduled job and concurrently update their status as `WORK IN PROGRESS` in same transaction
+- Most of tasks that queued in jasyncq would run in `exactly once` by `fetch_scheduled_tasks` BUT, some cases job disappeared because of worker shutdown while working. It could be restored by `fetch_pending_tasks` (that can check how long worker tolerate `WIP`-ed but not `Completed`(deleted row))
+
+
 ## How to use
 
 #### 1. Create aiomysql connection pool
@@ -83,7 +89,7 @@ $ python3 setup.py sdist
 $ python3 -m pip install ./dist/jasyncq-*
 ```
 
-## You should know
-
-- Dispatcher's `fetch_scheduled_tasks` and `fetch_pending_tasks` method takes scheduled job and concurrently update their status as `WORK IN PROGRESS` in same transaction
-- Most of tasks that queued in jasyncq would run in `exactly once` by `fetch_scheduled_tasks` BUT, some cases job disappeared because of worker shutdown while working. It could be restored by `fetch_pending_tasks` (that can check how long worker tolerate `WIP`-ed but not `Completed`(deleted row))
+## Deploy
+```
+$ twine upload ./dist/jasyncq-{version}.tar.gz
+```
