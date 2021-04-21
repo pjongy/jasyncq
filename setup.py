@@ -13,7 +13,7 @@ setup(
     author_email='hi.pjongy@gmail.com',
     url='https://github.com/pjongy/jasyncq',
     install_requires=[
-        'deserialize>=1.8.0',
+        'pydantic==1.7.3',
         'aiomysql>=0.0.20',
         'PyPika>=0.37.6',
     ],

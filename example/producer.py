@@ -3,7 +3,6 @@ import logging
 from asyncio import AbstractEventLoop
 
 import aiomysql
-import deserialize
 
 from jasyncq.dispatcher.model.task import TaskIn
 from jasyncq.dispatcher.tasks import TasksDispatcher
@@ -30,22 +29,14 @@ async def run(loop: AbstractEventLoop):
     queue_name = 'QUEUE_TEST'
     queued_tasks = await dispatcher.apply_tasks(
         tasks=[
-            deserialize.deserialize(TaskIn, {
-                'task': task,
-                'queue_name': queue_name,
-            })
+            TaskIn(task=task, queue_name=queue_name)
             for task in tasks
         ],
     )
 
     await dispatcher.apply_tasks(
         tasks=[
-            deserialize.deserialize(TaskIn, {
-                'task': task,
-                'queue_name': queue_name,
-                # This task will be consumed earlier than non-urgent
-                'is_urgent': True,
-            })
+            TaskIn(task=task, queue_name=queue_name, is_urgent=True)
             for task in tasks
         ],
     )
@@ -53,12 +44,7 @@ async def run(loop: AbstractEventLoop):
     depended_task = queued_tasks[0]
     await dispatcher.apply_tasks(
         tasks=[
-            deserialize.deserialize(TaskIn, {
-                'task': task,
-                'queue_name': queue_name,
-                # This task will consume after depended task is completed
-                'depend_on': str(depended_task.uuid),
-            })
+            TaskIn(task=task, queue_name=queue_name, depend_on=depended_task.uuid)
             for task in tasks
         ],
     )

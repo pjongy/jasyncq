@@ -64,7 +64,7 @@ class TasksDispatcher:
                 is_urgent=task.is_urgent,
                 task=task.task,
                 queue_name=task.queue_name,
-                depend_on=task.depend_on,
+                depend_on=let_if(task.depend_on, str),
             )
             for task in tasks
         ])

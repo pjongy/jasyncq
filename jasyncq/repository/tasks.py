@@ -4,7 +4,6 @@ import time
 import uuid
 from typing import List
 
-import deserialize
 from aiomysql import Pool
 from pypika import Query, Table, Order
 from pypika.terms import BasicCriterion
@@ -101,18 +100,15 @@ class TaskRepository(AbstractRepository):
         logging.debug(task_rows)
 
         return [
-            deserialize.deserialize(
-                TaskRow,
-                {
-                    'uuid': task_row[0],
-                    'status': task_row[1],
-                    'progressed_at': task_row[2],
-                    'scheduled_at': task_row[3],
-                    'is_urgent': task_row[4],
-                    'task': task_row[5],
-                    'queue_name': task_row[6],
-                    'depend_on': task_row[7],
-                }
+            TaskRow(
+                uuid=task_row[0],
+                status=task_row[1],
+                progressed_at=task_row[2],
+                scheduled_at=task_row[3],
+                is_urgent=task_row[4],
+                task=json.loads(task_row[5]),
+                queue_name=task_row[6],
+                depend_on=task_row[7],
             )
             for task_row in task_rows
         ]
@@ -156,23 +152,28 @@ class TaskRepository(AbstractRepository):
 
     async def insert_tasks(self, tasks: List[TaskRowIn]) -> List[TaskRow]:
         logging.debug(tasks)
-        insert_tasks_query = Query.into(self.task)
+        insert_tasks_query = Query.into(self.task).columns(
+            self.task__uuid,
+            self.task__status,
+            self.task__progressed_at,
+            self.task__scheduled_at,
+            self.task__is_urgent,
+            self.task__task,
+            self.task__queue_name,
+            self.task__depend_on,
+        )
+
         inserted_tasks = []
         for task in tasks:
-            task_id = uuid.uuid4()
-            task_json = json.dumps(task.task)
-            task_row: TaskRow = deserialize.deserialize(
-                TaskRow,
-                {
-                    'uuid': task_id,
-                    'status': TaskStatus.QUEUED,
-                    'progressed_at': 0,
-                    'scheduled_at': task.scheduled_at,
-                    'is_urgent': task.is_urgent,
-                    'task': task_json,
-                    'queue_name': task.queue_name,
-                    'depend_on': task.depend_on,
-                }
+            task_row = TaskRow(
+                uuid=str(uuid.uuid4()),
+                status=TaskStatus.QUEUED,
+                progressed_at=0,
+                scheduled_at=task.scheduled_at,
+                is_urgent=task.is_urgent,
+                task=task.task,
+                queue_name=task.queue_name,
+                depend_on=task.depend_on,
             )
             insert_tasks_query = insert_tasks_query.insert(
                 task_row.uuid,
@@ -180,7 +181,7 @@ class TaskRepository(AbstractRepository):
                 task_row.progressed_at,
                 task_row.scheduled_at,
                 task_row.is_urgent,
-                task_json,
+                json.dumps(task_row.task),
                 task_row.queue_name,
                 task_row.depend_on,
             )

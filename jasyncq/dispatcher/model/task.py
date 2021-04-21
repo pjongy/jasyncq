@@ -1,31 +1,20 @@
-from dataclasses import dataclass
 from typing import Optional
 from uuid import UUID
 
-import deserialize
-
-from jasyncq.util import let_if
+from pydantic import BaseModel
 
 
-@dataclass
-@deserialize.parser('uuid', UUID)
-@deserialize.parser('depend_on', lambda x: let_if(x, func=UUID))
-class TaskOut:
+class TaskOut(BaseModel):
     uuid: UUID
     scheduled_at: int  # epoch timestamp
     task: dict
     queue_name: str
-    depend_on: Optional[UUID]
+    depend_on: Optional[UUID] = None
 
 
-@dataclass
-@deserialize.default('scheduled_at', 0)
-@deserialize.default('is_urgent', False)
-@deserialize.parser('is_urgent', bool)
-@deserialize.parser('depend_on', lambda x: let_if(x, func=UUID))
-class TaskIn:
-    scheduled_at: int  # epoch timestamp
-    is_urgent: bool
+class TaskIn(BaseModel):
+    scheduled_at: int = 0  # epoch timestamp
+    is_urgent: bool = False
     task: dict
     queue_name: str
-    depend_on: Optional[UUID]
+    depend_on: Optional[UUID] = None

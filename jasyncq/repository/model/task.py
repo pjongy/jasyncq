@@ -1,14 +1,9 @@
 import enum
-import json
-from dataclasses import dataclass
 from typing import Optional
 
-import deserialize
-
-from jasyncq.util import let_if
+from pydantic import BaseModel
 
 
-@dataclass
 class TaskStatus(enum.IntEnum):
     DEFERRED = 1
     QUEUED = 2
@@ -16,13 +11,7 @@ class TaskStatus(enum.IntEnum):
     COMPLETED = 4
 
 
-@dataclass
-@deserialize.parser('uuid', str)
-@deserialize.parser('status', TaskStatus)
-@deserialize.parser('is_urgent', bool)
-@deserialize.parser('task', json.loads)
-@deserialize.parser('depend_on', lambda x: let_if(x, func=str))
-class TaskRow:
+class TaskRow(BaseModel):
     uuid: str
     status: TaskStatus
     progressed_at: int  # epoch timestamp
@@ -30,18 +19,12 @@ class TaskRow:
     is_urgent: bool
     task: dict
     queue_name: str
-    depend_on: Optional[str]
+    depend_on: Optional[str] = None
 
 
-@dataclass
-@deserialize.default('scheduled_at', 0)
-@deserialize.default('is_urgent', False)
-@deserialize.parser('is_urgent', bool)
-@deserialize.parser('task', json.loads)
-@deserialize.parser('depend_on', lambda x: let_if(x, func=str))
-class TaskRowIn:
-    scheduled_at: int  # epoch timestamp
-    is_urgent: bool
+class TaskRowIn(BaseModel):
+    scheduled_at: int = 0  # epoch timestamp
+    is_urgent: bool = False
     task: dict
     queue_name: str
-    depend_on: Optional[str]
+    depend_on: Optional[str] = None
