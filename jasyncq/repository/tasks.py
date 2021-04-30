@@ -4,7 +4,7 @@ import time
 import uuid
 from typing import List
 
-from aiomysql import Pool
+from aiomysql import Pool, Cursor, Connection
 from pypika import Query, Table, Order
 from pypika.terms import BasicCriterion
 
@@ -82,22 +82,27 @@ class TaskRepository(AbstractRepository):
         ).offset(offset).limit(limit).get_sql(quote_char='`')
         logging.debug(get_tasks_query)
 
-        task_rows = (await self._execute_and_fetch([
-            f'LOCK TABLES {self.table_name} WRITE, '
-            f'{self.table_name} as {self.task_child.alias} WRITE',
-            get_tasks_query,
-        ]))[1]
-        uuids = [task_row[0] for task_row in task_rows]
-        if uuids:
-            update_tasks_status = Query.update(self.task).set(
-                self.task__status, int(TaskStatus.WORK_IN_PROGRESS)
-            ).set(
-                self.task__progressed_at, int(current_epoch)
-            ).where(self.task__uuid.isin(uuids)).get_sql(quote_char='`')
-            logging.debug(update_tasks_status)
-            await self._execute([update_tasks_status])
-        await self._execute(['UNLOCK TABLES'])
-        logging.debug(task_rows)
+        async with self.pool.acquire() as conn:
+            conn: Connection = conn  # NOTE(pjongy): For type hinting
+            async with conn.cursor() as cur:
+                await cur.execute(
+                    f'LOCK TABLES {self.table_name} WRITE, '
+                    f'{self.table_name} as {self.task_child.alias} WRITE'
+                )
+                await cur.execute(get_tasks_query)
+                task_rows = await cur.fetchall()
+                uuids = [task_row[0] for task_row in task_rows]
+                if uuids:
+                    update_tasks_status = Query.update(self.task).set(
+                        self.task__status, int(TaskStatus.WORK_IN_PROGRESS)
+                    ).set(
+                        self.task__progressed_at, int(current_epoch)
+                    ).where(self.task__uuid.isin(uuids)).get_sql(quote_char='`')
+                    logging.debug(update_tasks_status)
+                    await cur.execute(update_tasks_status)
+                await cur.execute('UNLOCK TABLES')
+                await conn.commit()
+                logging.debug(task_rows)
 
         return [
             TaskRow(
