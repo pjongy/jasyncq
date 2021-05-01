@@ -1,3 +1,4 @@
+import asyncio
 import json
 from typing import Tuple, Any, Dict
 
@@ -133,5 +134,62 @@ async def test_if_fetch_scheduled_tasks_updating_status_to_WIP_with_fetching():
         status = task_row[1]
         progressed_at = task_row[2]
         assert uuid in inserted_tasks_by_uuid
+        assert status == TaskStatus.WORK_IN_PROGRESS
+        assert progressed_at > 0
+
+
+@pytest.mark.asyncio
+async def test_if_pending_tasks_updating_fetches_progressed_at_waiting_time_over():
+    pool: Pool = await aiomysql.create_pool(
+        host='127.0.0.1',
+        port=3306,
+        user='root',
+        db='test',
+        autocommit=False,
+    )
+    test_topic_name = random_string_lower()
+    repository = TaskRepository(pool=pool, topic_name=test_topic_name)
+    await repository.initialize()
+
+    queue_name = random_string_lower()
+    test_tasks = [
+        TaskRowIn(task={'id': 1}, queue_name=queue_name),
+        TaskRowIn(task={'id': 2}, queue_name=queue_name),
+    ]
+    await repository.insert_tasks(test_tasks)
+
+    pending_tasks_without_scheduled_fetching = await repository.fetch_pending_tasks(
+        0, 10, check_term_seconds=10, queue_name=queue_name)
+    # There should not exists pended tasks (not WIP-ed by scheduled_at)
+    assert len(pending_tasks_without_scheduled_fetching) == 0
+    # Fetch tasks with updating progressed_at and status
+    scheduled_tasks = await repository.fetch_scheduled_tasks(0, 10, queue_name)
+    scheduled_tasks_by_uuid: Dict[str, TaskRow] = {}
+    for scheduled_task in scheduled_tasks:
+        scheduled_tasks_by_uuid[scheduled_task.uuid] = scheduled_task
+
+    await asyncio.sleep(1)  # TODO(pjongy): Mock time in repository
+    pending_tasks = await repository.fetch_pending_tasks(
+        0, 10, check_term_seconds=1, queue_name=queue_name)
+    for pending_task in pending_tasks:
+        uuid = pending_task.uuid
+        assert uuid in scheduled_tasks_by_uuid
+        # progressed_at is updated by fetch_pending_tasks (not equal with fetch_scheduled_tasks')
+        assert scheduled_tasks_by_uuid[uuid].progressed_at != pending_task.progressed_at
+        assert scheduled_tasks_by_uuid[uuid].scheduled_at == pending_task.scheduled_at
+        assert scheduled_tasks_by_uuid[uuid].is_urgent == pending_task.is_urgent
+        assert scheduled_tasks_by_uuid[uuid].task == pending_task.task
+        assert scheduled_tasks_by_uuid[uuid].queue_name == pending_task.queue_name
+        assert scheduled_tasks_by_uuid[uuid].depend_on == pending_task.depend_on
+
+    columns = ['uuid', 'status', 'progressed_at']
+    fetching_query = f'SELECT {",".join(columns)} FROM jasyncq_{test_topic_name}'
+    task_rows = await _query(pool, fetching_query)
+
+    for task_row in task_rows:
+        uuid = task_row[0]
+        status = task_row[1]
+        progressed_at = task_row[2]
+        assert uuid in scheduled_tasks_by_uuid
         assert status == TaskStatus.WORK_IN_PROGRESS
         assert progressed_at > 0
