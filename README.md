@@ -93,3 +93,9 @@ $ python3 -m pip install ./dist/jasyncq-*
 ```
 $ twine upload ./dist/jasyncq-{version}.tar.gz
 ```
+
+## Test
+```
+$ python3 -m pip install pytest==6.2.3
+$ pytest
+```
