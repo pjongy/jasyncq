@@ -70,14 +70,10 @@ await dispatcher.complete_tasks(task_ids=task_ids)
 - Consumer: /example/consumer.py
 - Producer: /example/producer.py
 
-### Start test mysql with docker
+### Run example scripts
 ```
 $ docker run --name test_db -p 3306:3306 -e MYSQL_ALLOW_EMPTY_PASSWORD=true -d mysql:8.0.17
 $ docker exec -it test_db bash -c 'mysql -u root -e "create database test;"'
-```
-
-### Run example scripts
-```
 $ python3 -m example.producer
 $ python3 -m example.consumer
 ```
@@ -96,6 +92,8 @@ $ twine upload ./dist/jasyncq-{version}.tar.gz
 
 ## Test
 ```
+$ docker run --name test_db -p 3306:3306 -e MYSQL_ALLOW_EMPTY_PASSWORD=true -d mysql:8.0.17
+$ docker exec -it test_db bash -c 'mysql -u root -e "create database test;"'
 $ python3 -m pip install pytest==6.2.3
 $ pytest
 ```
