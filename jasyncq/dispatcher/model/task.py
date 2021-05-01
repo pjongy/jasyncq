@@ -16,5 +16,5 @@ class TaskIn(BaseModel):
     scheduled_at: int = 0  # epoch timestamp
     is_urgent: bool = False
     task: dict
-    queue_name: str
+    queue_name: str = 'DEFAULT_QUEUE'
     depend_on: Optional[UUID] = None
