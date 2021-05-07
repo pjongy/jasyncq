@@ -193,3 +193,71 @@ async def test_if_pending_tasks_updating_fetches_progressed_at_waiting_time_over
         assert uuid in scheduled_tasks_by_uuid
         assert status == TaskStatus.WORK_IN_PROGRESS
         assert progressed_at > 0
+
+
+@pytest.mark.asyncio
+async def test_if_pending_tasks_fetches_tasks_with_dependency_with_not_ignore_option():
+    pool: Pool = await aiomysql.create_pool(
+        host='127.0.0.1',
+        port=3306,
+        user='root',
+        db='test',
+        autocommit=False,
+    )
+    test_topic_name = random_string_lower()
+    repository = TaskRepository(pool=pool, topic_name=test_topic_name)
+    await repository.initialize()
+
+    queue_name = random_string_lower()
+    inserted_tasks = await repository.insert_tasks([
+        TaskRowIn(task={'id': 1}, queue_name=queue_name),
+    ])
+    genesis_task = inserted_tasks[0]
+    dependent_tasks = await repository.insert_tasks([
+        TaskRowIn(task={'id': 2}, queue_name=queue_name, depend_on=genesis_task.uuid),
+    ])
+    dependent_task = dependent_tasks[0]
+    scheduled_tasks = await repository.fetch_scheduled_tasks(0, 10, queue_name)
+    # Tried to fetch 10 tasks but just one task fetched that except task which depend on other task
+    assert len(scheduled_tasks) == 1
+    assert scheduled_tasks[0].uuid == genesis_task.uuid
+
+    scheduled_tasks = await repository.fetch_scheduled_tasks(0, 10, queue_name)
+    # Not fetched because depended task does not completed yet
+    assert len(scheduled_tasks) == 0
+
+    await repository.delete_tasks([genesis_task.uuid])  # Delete genesis task
+
+    scheduled_tasks = await repository.fetch_scheduled_tasks(0, 10, queue_name)
+    # Dependent task would be fetched because of depend on task was deleted
+    assert len(scheduled_tasks) == 1
+    assert scheduled_tasks[0].uuid == dependent_task.uuid
+
+
+@pytest.mark.asyncio
+async def test_if_pending_tasks_fetches_tasks_with_dependency_with_ignore_option():
+    pool: Pool = await aiomysql.create_pool(
+        host='127.0.0.1',
+        port=3306,
+        user='root',
+        db='test',
+        autocommit=False,
+    )
+    test_topic_name = random_string_lower()
+    repository = TaskRepository(pool=pool, topic_name=test_topic_name)
+    await repository.initialize()
+
+    queue_name = random_string_lower()
+    inserted_tasks = await repository.insert_tasks([
+        TaskRowIn(task={'id': 1}, queue_name=queue_name),
+    ])
+    genesis_task = inserted_tasks[0]
+    dependent_tasks = await repository.insert_tasks([
+        TaskRowIn(task={'id': 2}, queue_name=queue_name, depend_on=genesis_task.uuid),
+    ])
+    dependent_task = dependent_tasks[0]
+    scheduled_tasks = await repository.fetch_scheduled_tasks(
+        0, 10, queue_name, ignore_dependency=True)
+    # Fetch tasks without dependency at once
+    assert len(scheduled_tasks) == 2
+    assert {genesis_task.uuid, dependent_task.uuid} == set([task.uuid for task in scheduled_tasks])
