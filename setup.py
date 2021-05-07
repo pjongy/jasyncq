@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name='jasyncq',
-    version='1.1.1',
+    version='1.1.2',
     description='High reliability asynchronous queue using mysql(lock)',
     long_description=long_description,
     long_description_content_type="text/markdown",
