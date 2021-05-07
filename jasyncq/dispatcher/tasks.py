@@ -16,11 +16,13 @@ class TasksDispatcher:
         queue_name: str,
         limit: int,
         offset: int = 0,
+        ignore_dependency: bool = False,
     ) -> List[TaskOut]:
         task_rows = await self.repository.fetch_scheduled_tasks(
             offset=offset,
             limit=limit,
             queue_name=queue_name,
+            ignore_dependency=ignore_dependency,
         )
         return [
             TaskOut(
@@ -38,13 +40,15 @@ class TasksDispatcher:
         queue_name: str,
         limit: int,
         offset: int = 0,
-        check_term_seconds: int = 30
+        check_term_seconds: int = 30,
+        ignore_dependency: bool = False,
     ) -> List[TaskOut]:
         task_rows = await self.repository.fetch_pending_tasks(
             offset=offset,
             limit=limit,
             queue_name=queue_name,
             check_term_seconds=check_term_seconds,
+            ignore_dependency=ignore_dependency,
         )
         return [
             TaskOut(

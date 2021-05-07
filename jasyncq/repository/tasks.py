@@ -4,7 +4,7 @@ import time
 import uuid
 from typing import List
 
-from aiomysql import Pool, Cursor, Connection
+from aiomysql import Pool, Connection
 from pypika import Query, Table, Order
 from pypika.terms import BasicCriterion
 
@@ -56,27 +56,45 @@ class TaskRepository(AbstractRepository):
         fetch_filter: BasicCriterion,
         offset: int,
         limit: int,
+        ignore_dependency: bool = False,
     ) -> List[TaskRow]:
-        # Note(pjongy): Represent dependent task is already done or no dependency
-        fetch_filter &= self.task_child__uuid.isnull()
         current_epoch = time.time()
 
-        get_tasks_query = Query.from_(
-            self.task
-        ).left_join(
-            self.task_child
-        ).on(
-            self.task__depend_on == self.task_child__uuid
-        ).select(
-            self.task__uuid,
-            self.task__status,
-            self.task__progressed_at,
-            self.task__scheduled_at,
-            self.task__is_urgent,
-            self.task__task,
-            self.task__queue_name,
-            self.task__depend_on,
-        ).where(fetch_filter).orderby(
+        if ignore_dependency:
+            # Faster than fetching with dependency
+            get_tasks_query = Query.from_(
+                self.task
+            ).select(
+                self.task__uuid,
+                self.task__status,
+                self.task__progressed_at,
+                self.task__scheduled_at,
+                self.task__is_urgent,
+                self.task__task,
+                self.task__queue_name,
+                self.task__depend_on,
+            )
+        else:
+            # Note(pjongy): Represent dependent task is already done or no dependency
+            fetch_filter &= self.task_child__uuid.isnull()
+            get_tasks_query = Query.from_(
+                self.task
+            ).left_join(
+                self.task_child
+            ).on(
+                self.task__depend_on == self.task_child__uuid
+            ).select(
+                self.task__uuid,
+                self.task__status,
+                self.task__progressed_at,
+                self.task__scheduled_at,
+                self.task__is_urgent,
+                self.task__task,
+                self.task__queue_name,
+                self.task__depend_on,
+            )
+
+        get_tasks_query = get_tasks_query.where(fetch_filter).orderby(
             self.task__is_urgent,
             order=Order.desc,
         ).offset(offset).limit(limit).get_sql(quote_char='`')
@@ -123,6 +141,7 @@ class TaskRepository(AbstractRepository):
         offset: int,
         limit: int,
         queue_name: str,
+        ignore_dependency: bool = False,
     ) -> List[TaskRow]:
         current_epoch = time.time()
 
@@ -134,6 +153,7 @@ class TaskRepository(AbstractRepository):
             fetch_filter=fetch_filter,
             offset=offset,
             limit=limit,
+            ignore_dependency=ignore_dependency,
         )
 
     async def fetch_pending_tasks(
@@ -142,6 +162,7 @@ class TaskRepository(AbstractRepository):
         limit: int,
         check_term_seconds: int,
         queue_name: str,
+        ignore_dependency: bool = False,
     ) -> List[TaskRow]:
         current_epoch = time.time()
 
@@ -153,6 +174,7 @@ class TaskRepository(AbstractRepository):
             fetch_filter=fetch_filter,
             offset=offset,
             limit=limit,
+            ignore_dependency=ignore_dependency,
         )
 
     async def insert_tasks(self, tasks: List[TaskRowIn]) -> List[TaskRow]:
