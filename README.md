@@ -66,6 +66,50 @@ task_ids = [str(task.uuid) for task in tasks]
 await dispatcher.complete_tasks(task_ids=task_ids)
 ```
 
+## Other features
+
+### Apply tasks with dependency
+```python
+genesis = TaskIn(task={}, queue_name=queue_name)
+dependent = TaskIn(task={}, queue_name=queue_name, depend_on=task.uuid)
+# 'dependent' task might fetched after 'genesis' task is completed
+await dispatcher.apply_tasks(tasks=[genesis, dependent])
+```
+
+### Apply delayed task(scheduled task)
+```python
+scheduled_at = time.time() + 60
+task = TaskIn(task={}, queue_name=queue_name, scheduled_at=scheduled_at)
+# 'task' task might fetched after 60 seconds from now
+await dispatcher.apply_tasks(tasks=[task])
+```
+
+### Apply urgent task (priority)
+```python
+normal = TaskIn(task={}, queue_name=queue_name)
+urgent = TaskIn(task={}, queue_name=queue_name, is_urgent=True)
+# 'urgent' task might fetched earlier than 'normal' task if queue was already fulled
+await dispatcher.apply_tasks(tasks=[normal, urgent])
+```
+
+### Fetching with ignoring dependency
+```python
+scheduled_tasks = await dispatcher.fetch_scheduled_tasks(
+    queue_name='QUEUE_TEST',
+    limit=10,
+    ignore_dependency=True,
+)
+pending_tasks = await dispatcher.fetch_pending_tasks(
+    queue_name='QUEUE_TEST',
+    limit=10,
+    check_term_seconds=60,
+    ignore_dependency=True,
+)
+tasks = [*pending_tasks, *scheduled_tasks]
+# ...RUN JOBS WITH tasks
+```
+
+
 ## Example
 - Consumer: /example/consumer.py
 - Producer: /example/producer.py
